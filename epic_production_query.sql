@@ -1,28 +1,15 @@
 /*
 -----------------------------------------------------------------------------------------------------------------
 -- Abax Healthcare, Inc
--- Contact: Stacey Fontenot, Chief Technology Officer
+-- Contact: Jay Dalke
 -- Modified: 03/05/2026
--- Email: stacey.fontenot@abaxhealth.com
--- Please reach out to Stacey Fontenot for any assistance with this query. 
+-- Email: support@abaxhealth.com
+-- Please reach out to Jay Dalke for any assistance with this query. 
 -- Query support is part of Abax Health's comprehensive implementation process.
 -----------------------------------------------------------------------------------------------------------------
 -- Purpose:
 -- This query extracts detailed patient, order, and referral information for Abax Health.
 -- It utilizes temporary tables and joins multiple data sources for comprehensive reporting.
------------------------------------------------------------------------------------------------------------------
--- Change Log:
---   03/05/2026 — Incorporated all POC helper-query fields into production script.
---                Added: order_name, order_entry_date, clinical_category, specialty,
---                       ordering_department_name, ordering_provider_specialty, order_status,
---                       referral_status, order_result_status, referral_status_detail,
---                       referral_entry_date, referral_close_date, referral_type,
---                       patient_id, encounter_contact_date, max_procedure_contact_date,
---                       appointment_request_status (APPT_REQUEST), cpt_procedure_description,
---                       region, campus, location, financial_class.
---                Removed: All guarantor fields, order_notes, admit fields, insurance_2 fields.
---                Fixed:   Expired-order filter syntax (missing paren + wrong operator),
---                         PAT_CLASS definition, #SCHEDULE_INFO DROP, redundant appointment columns.
 -----------------------------------------------------------------------------------------------------------------
 -- Filters:
 -- @DATE FILTER
