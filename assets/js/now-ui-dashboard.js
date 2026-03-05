@@ -16,10 +16,9 @@
  */
 
 (function() {
-  isWindows = navigator.platform.indexOf('Win') > -1 ? true : false;
+  var isWindows = navigator.platform.indexOf('Win') > -1 ? true : false;
 
   if (isWindows) {
-    // if we are on windows OS we activate the perfectScrollbar function
     var ps = new PerfectScrollbar('.sidebar-wrapper');
     var ps2 = new PerfectScrollbar('.main-panel');
 
@@ -29,20 +28,22 @@
   }
 })();
 
-transparent = true;
-transparentDemo = true;
-fixedTop = false;
+var transparent = true;
+var transparentDemo = true;
+var fixedTop = false;
 
-navbar_initialized = false;
-backgroundOrange = false;
-sidebar_mini_active = false;
-toggle_initialized = false;
+var navbar_initialized = false;
+var backgroundOrange = false;
+var sidebar_mini_active = false;
+var toggle_initialized = false;
 
 var is_iPad = navigator.userAgent.match(/iPad/i) != null;
 var scrollElement = navigator.platform.indexOf('Win') > -1 ? $(".main-panel") : $(window);
 
-seq = 0, delays = 80, durations = 500;
-seq2 = 0, delays2 = 80, durations2 = 500;
+var seq = 0, delays = 80, durations = 500;
+var seq2 = 0, delays2 = 80, durations2 = 500;
+
+var $navbar, scroll_distance;
 
 $(document).ready(function() {
 
@@ -72,9 +73,9 @@ $(document).ready(function() {
 
   // Activate bootstrapSwitch
   $('.bootstrap-switch').each(function() {
-    $this = $(this);
-    data_on_label = $this.data('on-label') || '';
-    data_off_label = $this.data('off-label') || '';
+    var $this = $(this);
+    var data_on_label = $this.data('on-label') || '';
+    var data_off_label = $this.data('off-label') || '';
 
     $this.bootstrapSwitch({
       onText: data_on_label,
@@ -84,7 +85,7 @@ $(document).ready(function() {
 });
 
 $(document).on('click', '.navbar-toggle', function() {
-  $toggle = $(this);
+  var $toggle = $(this);
 
   if (nowuiDashboard.misc.navbar_menu_visible == 1) {
     $('html').removeClass('nav-open');
@@ -99,7 +100,7 @@ $(document).on('click', '.navbar-toggle', function() {
       $toggle.addClass('toggled');
     }, 580);
 
-    div = '<div id="bodyClick"></div>';
+    var div = '<div id="bodyClick"></div>';
     $(div).appendTo('body').click(function() {
       $('html').removeClass('nav-open');
       nowuiDashboard.misc.navbar_menu_visible = 0;
@@ -121,7 +122,7 @@ $(window).resize(function() {
   if ($('.full-screen-map').length == 0 && $('.bd-docs').length == 0) {
 
     $navbar = $('.navbar');
-    isExpanded = $('.navbar').find('[data-toggle="collapse"]').attr("aria-expanded");
+    var isExpanded = $('.navbar').find('[data-toggle="collapse"]').attr("aria-expanded");
     if ($navbar.hasClass('bg-white') && $(window).width() > 991) {
       if (scrollElement.scrollTop() == 0) {
         $navbar.removeClass('bg-white').addClass('navbar-transparent');
@@ -140,8 +141,22 @@ nowuiDashboard = {
     navbar_menu_visible: 0
   },
 
+  checkScrollForTransparentNavbar: function() {
+    if ($(document).scrollTop() > scroll_distance) {
+      if (transparent) {
+        transparent = false;
+        $navbar.removeClass('navbar-transparent');
+      }
+    } else {
+      if (!transparent) {
+        transparent = true;
+        $navbar.addClass('navbar-transparent');
+      }
+    }
+  },
+
   showNotification: function(from, align) {
-    color = 'primary';
+    var color = 'primary';
 
     $.notify({
       icon: "now-ui-icons ui-1_bell-53",
@@ -156,8 +171,6 @@ nowuiDashboard = {
       }
     });
   }
-
-
 };
 
 function hexToRGB(hex, alpha) {
