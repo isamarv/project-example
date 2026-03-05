@@ -1,4 +1,4 @@
-demo = {
+var demo = {
   initPickColor: function() {
     $('.pick-class-label').click(function() {
       var new_class = $(this).attr('new-class');
@@ -14,10 +14,9 @@ demo = {
   },
 
   initDocChart: function() {
-    chartColor = "#FFFFFF";
+    var chartColor = "#FFFFFF";
 
-    // General configuration for the charts with Line gradientStroke
-    gradientChartOptionsConfiguration = {
+    var gradientChartOptionsConfiguration = {
       maintainAspectRatio: false,
       legend: {
         display: false
@@ -35,7 +34,6 @@ demo = {
       scales: {
         yAxes: [{
           display: 0,
-          gridLines: 0,
           ticks: {
             display: false
           },
@@ -48,7 +46,6 @@ demo = {
         }],
         xAxes: [{
           display: 0,
-          gridLines: 0,
           ticks: {
             display: false
           },
@@ -70,17 +67,17 @@ demo = {
       }
     };
 
-    ctx = document.getElementById('lineChartExample').getContext("2d");
+    var ctx = document.getElementById('lineChartExample').getContext("2d");
 
-    gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
+    var gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
     gradientStroke.addColorStop(0, '#80b6f4');
     gradientStroke.addColorStop(1, chartColor);
 
-    gradientFill = ctx.createLinearGradient(0, 170, 0, 50);
+    var gradientFill = ctx.createLinearGradient(0, 170, 0, 50);
     gradientFill.addColorStop(0, "rgba(128, 182, 244, 0)");
     gradientFill.addColorStop(1, "rgba(249, 99, 59, 0.40)");
 
-    myChart = new Chart(ctx, {
+    var myChart = new Chart(ctx, {
       type: 'line',
       responsive: true,
       data: {
@@ -106,10 +103,9 @@ demo = {
 
   initDashboardPageCharts: function() {
 
-    chartColor = "#FFFFFF";
+    var chartColor = "#FFFFFF";
 
-    // General configuration for the charts with Line gradientStroke
-    gradientChartOptionsConfiguration = {
+    var gradientChartOptionsConfiguration = {
       maintainAspectRatio: false,
       legend: {
         display: false
@@ -127,7 +123,6 @@ demo = {
       scales: {
         yAxes: [{
           display: 0,
-          gridLines: 0,
           ticks: {
             display: false
           },
@@ -140,7 +135,6 @@ demo = {
         }],
         xAxes: [{
           display: 0,
-          gridLines: 0,
           ticks: {
             display: false
           },
@@ -162,7 +156,7 @@ demo = {
       }
     };
 
-    gradientChartOptionsConfigurationWithNumbersAndGrid = {
+    var gradientChartOptionsConfigurationWithNumbersAndGrid = {
       maintainAspectRatio: false,
       legend: {
         display: false
@@ -179,7 +173,6 @@ demo = {
       responsive: true,
       scales: {
         yAxes: [{
-          gridLines: 0,
           gridLines: {
             zeroLineColor: "transparent",
             drawBorder: false
@@ -187,7 +180,6 @@ demo = {
         }],
         xAxes: [{
           display: 0,
-          gridLines: 0,
           ticks: {
             display: false
           },
@@ -302,17 +294,17 @@ demo = {
     var cardStatsMiniLineColor = "#fff",
       cardStatsMiniDotColor = "#fff";
 
-    ctx = document.getElementById('lineChartExample').getContext("2d");
+    var ctx = document.getElementById('lineChartExample').getContext("2d");
 
-    gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
+    var gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
     gradientStroke.addColorStop(0, '#80b6f4');
     gradientStroke.addColorStop(1, chartColor);
 
-    gradientFill = ctx.createLinearGradient(0, 170, 0, 50);
+    var gradientFill = ctx.createLinearGradient(0, 170, 0, 50);
     gradientFill.addColorStop(0, "rgba(128, 182, 244, 0)");
     gradientFill.addColorStop(1, "rgba(249, 99, 59, 0.40)");
 
-    myChart = new Chart(ctx, {
+    var myChart = new Chart(ctx, {
       type: 'line',
       responsive: true,
       data: {
@@ -411,7 +403,6 @@ demo = {
         responsive: 1,
         scales: {
           yAxes: [{
-            gridLines: 0,
             gridLines: {
               zeroLineColor: "transparent",
               drawBorder: false
@@ -419,7 +410,6 @@ demo = {
           }],
           xAxes: [{
             display: 0,
-            gridLines: 0,
             ticks: {
               display: false
             },
