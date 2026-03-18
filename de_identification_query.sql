@@ -15,63 +15,59 @@
 -- DE-IDENTIFICATION LOGIC
 -----------------------------------------------------------------------------------------------------------------
 --
--- POC clients apply the following three techniques to anonymize identifiers before data leaves
--- their environment. The full query below demonstrates each in context.
+-- IMPORTANT: Before running, the client MUST set @salt to a secret value known only to them.
+-- The salt is never transmitted to Abax — it stays within the client's environment.
 --
--- ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
--- │ 1. ANONYMIZE PATIENT MRN                                                                  │
--- │                                                                                            │
--- │    Pad the real MRN on both sides with a random 3-digit number so the original value       │
--- │    cannot be read directly from the output.                                                │
--- │                                                                                            │
--- │    CONCAT(                                                                                 │
--- │        RIGHT(REPLICATE('0',3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3),    │
--- │        patient.PAT_MRN_ID,                                                                 │
--- │        RIGHT(REPLICATE('0',3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3)     │
--- │    ) AS anonymized_patient_mrn                                                             │
--- │                                                                                            │
--- │    How it works:                                                                           │
--- │      • NEWID() generates a unique GUID per row.                                            │
--- │      • CHECKSUM() converts the GUID to an integer; ABS() makes it positive.                │
--- │      • % 1000 reduces it to a 0-999 range → a 3-digit random number.                      │
--- │      • REPLICATE('0',3) + CAST(… AS varchar(3)) zero-pads to exactly 3 digits.             │
--- │      • RIGHT(…, 3) keeps only the last 3 characters.                                       │
--- │      • CONCAT prepends and appends these random digits around the real MRN.                 │
--- │      • Each execution produces different padding, so outputs are non-deterministic.         │
--- ├─────────────────────────────────────────────────────────────────────────────────────────────┤
--- │ 2. REDUCE DATE OF BIRTH TO YEAR ONLY                                                      │
--- │                                                                                            │
--- │    Return only the birth year instead of the full date to prevent re-identification         │
--- │    while still allowing age-based analysis.                                                 │
--- │                                                                                            │
--- │    YEAR(patient.BIRTH_DATE) AS patient_birth_year                                          │
--- │                                                                                            │
--- ├─────────────────────────────────────────────────────────────────────────────────────────────┤
--- │ 3. ANONYMIZE ORDER ID                                                                      │
--- │                                                                                            │
--- │    Same random-padding pattern as the MRN, applied to ORDER_PROC_ID.                       │
--- │                                                                                            │
--- │    CONCAT(                                                                                 │
--- │        RIGHT(REPLICATE('0',3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3),    │
--- │        pof.ORDER_PROC_ID,                                                                  │
--- │        RIGHT(REPLICATE('0',3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3)     │
--- │    ) AS anonymized_order_id                                                                │
--- │                                                                                            │
--- ├─────────────────────────────────────────────────────────────────────────────────────────────┤
--- │ 4. OMIT DIRECT IDENTIFIERS                                                                 │
--- │                                                                                            │
--- │    The following fields from the production query are excluded entirely:                    │
--- │      • Patient first/last/middle name, suffix                                              │
--- │      • SSN                                                                                 │
--- │      • Full address (street, city, state, zip)                                             │
--- │      • Phone numbers (home, work, cell)                                                    │
--- │      • Email address                                                                       │
--- │      • Insurance subscriber name / member ID / group number                                │
--- │      • Patient race, ethnicity, marital status, language, sex                              │
--- └─────────────────────────────────────────────────────────────────────────────────────────────┘
+-- ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
+-- │ 1. SALTED HASH — PATIENT MRN                                                               │
+-- │                                                                                             │
+-- │    CONVERT(varchar(64), HASHBYTES('SHA2_256', @salt + patient.PAT_MRN_ID), 2)               │
+-- │                                                                                             │
+-- │    • Concatenates the secret @salt with the real MRN, then hashes with SHA-256.             │
+-- │    • The output is a fixed-length 64-character hex string.                                  │
+-- │    • One-way: the original MRN cannot be recovered from the hash.                           │
+-- │    • Deterministic per salt: the same MRN + salt always produces the same hash,             │
+-- │      so records for the same patient can still be linked within a single extract.           │
+-- │    • Without the salt, brute-forcing the MRN from the hash is computationally infeasible.   │
+-- ├──────────────────────────────────────────────────────────────────────────────────────────────┤
+-- │ 2. HIPAA SAFE HARBOR — BIRTH YEAR                                                          │
+-- │                                                                                             │
+-- │    CASE                                                                                     │
+-- │        WHEN DATEDIFF(YEAR, patient.BIRTH_DATE, GETDATE()) >= 90 THEN NULL                   │
+-- │        WHEN YEAR(patient.BIRTH_DATE) = YEAR(GETDATE())          THEN NULL                   │
+-- │        ELSE YEAR(patient.BIRTH_DATE)                                                        │
+-- │    END                                                                                      │
+-- │                                                                                             │
+-- │    • Ages 90+ are suppressed (HIPAA Safe Harbor §164.514(b)(2)(i)(C)).                      │
+-- │    • Current-year births (newborns) are suppressed to prevent re-identification.            │
+-- │    • All other patients return birth year only — no month or day.                           │
+-- ├──────────────────────────────────────────────────────────────────────────────────────────────┤
+-- │ 3. SALTED HASH — ORDER ID                                                                  │
+-- │                                                                                             │
+-- │    CONVERT(varchar(64), HASHBYTES('SHA2_256', @salt + CAST(... AS varchar(20))), 2)         │
+-- │                                                                                             │
+-- │    Same salted SHA-256 approach as the MRN, applied to ORDER_PROC_ID.                       │
+-- ├──────────────────────────────────────────────────────────────────────────────────────────────┤
+-- │ 4. OMIT DIRECT IDENTIFIERS                                                                  │
+-- │                                                                                             │
+-- │    The following fields from the production query are excluded entirely:                     │
+-- │      • Patient first/last/middle name, suffix                                               │
+-- │      • SSN                                                                                  │
+-- │      • Full address (street, city, state, zip)                                              │
+-- │      • Phone numbers (home, work, cell)                                                     │
+-- │      • Email address                                                                        │
+-- │      • Insurance subscriber name / member ID / group number                                 │
+-- │      • Patient race, ethnicity, marital status, language, sex                               │
+-- └──────────────────────────────────────────────────────────────────────────────────────────────┘
 --
 -----------------------------------------------------------------------------------------------------------------
 */
+
+------------------------------------------------------------------------
+-- @salt: Client-defined secret. MUST be set before execution.
+-- Do NOT share this value with Abax or include it in any extract.
+------------------------------------------------------------------------
+DECLARE @salt varchar(128) = 'REPLACE_WITH_YOUR_SECRET_SALT_VALUE';
 
 WITH ceot_maxdate AS (
     SELECT
@@ -84,19 +80,17 @@ WITH ceot_maxdate AS (
 )
 
 SELECT
-    CONCAT(
-        RIGHT(REPLICATE('0', 3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3),
-        patient.PAT_MRN_ID,
-        RIGHT(REPLICATE('0', 3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3)
-    ) AS anonymized_patient_mrn,
+    CONVERT(varchar(64), HASHBYTES('SHA2_256', @salt + patient.PAT_MRN_ID), 2)
+        AS anonymized_patient_mrn,
 
-    YEAR(patient.BIRTH_DATE) AS patient_birth_year,
+    CASE
+        WHEN DATEDIFF(YEAR, patient.BIRTH_DATE, GETDATE()) >= 90 THEN NULL
+        WHEN YEAR(patient.BIRTH_DATE) = YEAR(GETDATE())          THEN NULL
+        ELSE YEAR(patient.BIRTH_DATE)
+    END AS patient_birth_year,
 
-    CONCAT(
-        RIGHT(REPLICATE('0', 3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3),
-        pof.ORDER_PROC_ID,
-        RIGHT(REPLICATE('0', 3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3)
-    ) AS anonymized_order_id,
+    CONVERT(varchar(64), HASHBYTES('SHA2_256', @salt + CAST(pof.ORDER_PROC_ID AS varchar(20))), 2)
+        AS anonymized_order_id,
 
     FORMAT(pof.ORDER_DATE, 'MM-dd-yyyy') AS order_date,
     FORMAT(pof.ORDER_INST, 'MM-dd-yyyy') AS entry_date,
