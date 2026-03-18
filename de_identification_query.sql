@@ -11,13 +11,65 @@
 -- It removes or obfuscates PHI/PII fields (patient names, SSN, full DOB, addresses, phone numbers,
 -- email, insurance member details) while preserving the clinical and operational data needed for
 -- proof-of-concept analysis.
+-----------------------------------------------------------------------------------------------------------------
+-- DE-IDENTIFICATION LOGIC
+-----------------------------------------------------------------------------------------------------------------
 --
--- De-identification techniques applied:
---   1. Patient MRN:    Wrapped with random padding via CHECKSUM(NEWID()) to produce anonymized_patient_mrn.
---   2. Date of Birth:  Reduced to birth year only (YEAR(BIRTH_DATE)).
---   3. Order ID:       Wrapped with random padding via CHECKSUM(NEWID()) to produce anonymized_order_id.
---   4. Excluded fields: Patient name, SSN, full address, phone numbers, email, insurance subscriber
---                        name/number, and other direct identifiers are omitted entirely.
+-- POC clients apply the following three techniques to anonymize identifiers before data leaves
+-- their environment. The full query below demonstrates each in context.
+--
+-- ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+-- │ 1. ANONYMIZE PATIENT MRN                                                                  │
+-- │                                                                                            │
+-- │    Pad the real MRN on both sides with a random 3-digit number so the original value       │
+-- │    cannot be read directly from the output.                                                │
+-- │                                                                                            │
+-- │    CONCAT(                                                                                 │
+-- │        RIGHT(REPLICATE('0',3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3),    │
+-- │        patient.PAT_MRN_ID,                                                                 │
+-- │        RIGHT(REPLICATE('0',3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3)     │
+-- │    ) AS anonymized_patient_mrn                                                             │
+-- │                                                                                            │
+-- │    How it works:                                                                           │
+-- │      • NEWID() generates a unique GUID per row.                                            │
+-- │      • CHECKSUM() converts the GUID to an integer; ABS() makes it positive.                │
+-- │      • % 1000 reduces it to a 0-999 range → a 3-digit random number.                      │
+-- │      • REPLICATE('0',3) + CAST(… AS varchar(3)) zero-pads to exactly 3 digits.             │
+-- │      • RIGHT(…, 3) keeps only the last 3 characters.                                       │
+-- │      • CONCAT prepends and appends these random digits around the real MRN.                 │
+-- │      • Each execution produces different padding, so outputs are non-deterministic.         │
+-- ├─────────────────────────────────────────────────────────────────────────────────────────────┤
+-- │ 2. REDUCE DATE OF BIRTH TO YEAR ONLY                                                      │
+-- │                                                                                            │
+-- │    Return only the birth year instead of the full date to prevent re-identification         │
+-- │    while still allowing age-based analysis.                                                 │
+-- │                                                                                            │
+-- │    YEAR(patient.BIRTH_DATE) AS patient_birth_year                                          │
+-- │                                                                                            │
+-- ├─────────────────────────────────────────────────────────────────────────────────────────────┤
+-- │ 3. ANONYMIZE ORDER ID                                                                      │
+-- │                                                                                            │
+-- │    Same random-padding pattern as the MRN, applied to ORDER_PROC_ID.                       │
+-- │                                                                                            │
+-- │    CONCAT(                                                                                 │
+-- │        RIGHT(REPLICATE('0',3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3),    │
+-- │        pof.ORDER_PROC_ID,                                                                  │
+-- │        RIGHT(REPLICATE('0',3) + CAST(ABS(CHECKSUM(NEWID())) % 1000 AS varchar(3)), 3)     │
+-- │    ) AS anonymized_order_id                                                                │
+-- │                                                                                            │
+-- ├─────────────────────────────────────────────────────────────────────────────────────────────┤
+-- │ 4. OMIT DIRECT IDENTIFIERS                                                                 │
+-- │                                                                                            │
+-- │    The following fields from the production query are excluded entirely:                    │
+-- │      • Patient first/last/middle name, suffix                                              │
+-- │      • SSN                                                                                 │
+-- │      • Full address (street, city, state, zip)                                             │
+-- │      • Phone numbers (home, work, cell)                                                    │
+-- │      • Email address                                                                       │
+-- │      • Insurance subscriber name / member ID / group number                                │
+-- │      • Patient race, ethnicity, marital status, language, sex                              │
+-- └─────────────────────────────────────────────────────────────────────────────────────────────┘
+--
 -----------------------------------------------------------------------------------------------------------------
 */
 
