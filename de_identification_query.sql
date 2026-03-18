@@ -58,6 +58,21 @@
 -- │      • Email address                                                                        │
 -- │      • Insurance subscriber name / member ID / group number                                 │
 -- │      • Patient race, ethnicity, marital status, language, sex                               │
+-- ├──────────────────────────────────────────────────────────────────────────────────────────────┤
+-- │ 5. DATA VALIDATION WORKFLOW                                                                 │
+-- │                                                                                             │
+-- │    During POC data validation calls, the client needs to match hashed records on the        │
+-- │    Abax side back to real records on their side. Because the hash is deterministic          │
+-- │    (same salt + same MRN = same hash every time), the client generates a LOCAL-ONLY         │
+-- │    lookup table that maps each hash back to the original identifier.                        │
+-- │                                                                                             │
+-- │    The lookup table stays entirely within the client's environment and is NEVER sent         │
+-- │    to Abax. During the validation call:                                                     │
+-- │      • Abax reads a hashed MRN from the de-identified extract.                             │
+-- │      • The client searches their lookup table for that hash and finds the real MRN.         │
+-- │      • The client confirms (or flags) data integrity on their side.                         │
+-- │                                                                                             │
+-- │    See the CLIENT-SIDE LOOKUP TABLE query at the bottom of this file.                       │
 -- └──────────────────────────────────────────────────────────────────────────────────────────────┘
 --
 -----------------------------------------------------------------------------------------------------------------
@@ -215,4 +230,27 @@ LEFT JOIN ZC_APPT_REQ_STATUS zc_appt_req_stat
 
 WHERE
     pof.ORDER_DATE IS NOT NULL
+;
+
+
+/*
+-----------------------------------------------------------------------------------------------------------------
+-- CLIENT-SIDE LOOKUP TABLE (for data validation calls)
+-----------------------------------------------------------------------------------------------------------------
+-- This query is run ONLY by the client, within their own environment.
+-- It produces a mapping of hashed identifiers back to real values so the client can
+-- cross-reference records during validation calls with Abax.
+--
+-- THIS TABLE MUST NEVER BE SENT TO ABAX OR INCLUDED IN ANY DATA EXTRACT.
+-----------------------------------------------------------------------------------------------------------------
+*/
+
+-- Use the SAME @salt value that was used in the de-identification query above.
+-- DECLARE @salt varchar(128) = 'REPLACE_WITH_YOUR_SECRET_SALT_VALUE';
+
+SELECT
+    patient.PAT_MRN_ID          AS real_patient_mrn,
+    CONVERT(varchar(64), HASHBYTES('SHA2_256', @salt + patient.PAT_MRN_ID), 2)
+                                 AS anonymized_patient_mrn
+FROM PATIENT patient
 ;
