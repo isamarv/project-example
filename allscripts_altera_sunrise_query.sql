@@ -160,7 +160,7 @@ SELECT
 FROM sunrise.Visit v
 LEFT JOIN sunrise.OrderFact o
     ON o.VisitID = v.VisitID
-INNER JOIN sunrise.Referral r
+LEFT JOIN sunrise.Referral r
     ON r.OrderID = o.OrderID
 LEFT JOIN sunrise.Patient p
     ON p.PatientID = v.PatientID
