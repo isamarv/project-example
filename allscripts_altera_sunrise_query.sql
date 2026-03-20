@@ -67,15 +67,15 @@ SELECT
     op.ProviderName AS ordering_physician_name,
     rcl.ReferralClassName AS referral_class,
 
-    r.ReferralID AS referral_id,
+    r.ReferralID AS REFERRAL_ID,
     v.VisitID AS visit_id,
 
     rtl.LocationName AS referred_to_location,
     rtl.AddressLine1 AS referred_to_location_address,
-    rtd.DepartmentName AS referred_to_department,
+    rtd.DepartmentName AS referred_to_Department,
     rtl.PhoneNumber AS referred_to_location_phone,
 
-    opc.CPTCode AS cpt_code,
+    opc.CPTCode AS CPT_code,
 
     ps.SpecialtyName AS specialty,
     od.DepartmentName AS ordering_department_name,
