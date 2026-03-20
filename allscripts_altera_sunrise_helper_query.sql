@@ -125,7 +125,7 @@ SELECT
     lrc.ReferralClassName AS referral_class,
 
     -- Referral
-    re.ReferralID,
+    re.ReferralID AS referral_id,
     loc.LocationName AS referred_to_location,
     loc.AddressLine1 AS referred_to_location_address,
     dept.DepartmentName AS referred_to_department,
