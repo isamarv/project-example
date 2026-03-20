@@ -40,6 +40,29 @@ appt_ranked AS (
         ON ss.SchedulingStatusID = a.SchedulingStatusID
     LEFT JOIN sunrise.NoShowStatus ns
         ON ns.NoShowStatusID = a.NoShowStatusID
+),
+appt_rollup AS (
+    SELECT
+        a.VisitID,
+        MAX(
+            CASE
+                WHEN UPPER(COALESCE(aps.StatusName, '')) LIKE '%NO SHOW%'
+                  OR UPPER(COALESCE(aps.StatusName, '')) LIKE '%NO-SHOW%'
+                  OR UPPER(COALESCE(aps.StatusName, '')) LIKE '%MISSED%'
+                THEN 1 ELSE 0
+            END
+        ) AS had_missed_or_no_show,
+        MAX(
+            CASE
+                WHEN UPPER(COALESCE(aps.StatusName, '')) LIKE '%CANCEL%'
+                THEN 1 ELSE 0
+            END
+        ) AS had_appointment_canceled
+    FROM sunrise.Appointment a
+    LEFT JOIN sunrise.AppointmentStatus aps
+        ON aps.AppointmentStatusID = a.AppointmentStatusID
+    GROUP BY
+        a.VisitID
 )
 
 SELECT
@@ -101,16 +124,43 @@ SELECT
     ars.AppointmentRequestStatusName AS appointment_request_status,
     appt.appointment_status,
     appt.scheduling_status,
+    rss.StatusName AS referral_scheduling_status,
+    COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName) AS leakage_scheduling_status,
     appt.no_show_status,
     CASE
         WHEN UPPER(COALESCE(appt.no_show_status, '')) IN ('NO SHOW', 'NO-SHOW', 'NOSHOW') THEN 1
         ELSE 0
-    END AS is_no_show
+    END AS is_no_show,
+    COALESCE(aroll.had_missed_or_no_show, 0) AS had_missed_or_no_show,
+    COALESCE(aroll.had_appointment_canceled, 0) AS had_appointment_canceled,
+    CASE
+        WHEN UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) IN
+        (
+            'ALL VISITS COMPLETE',
+            'APPOINTMENT CANCELED',
+            'AUTHORIZATION NOT NEEDED',
+            'CALLED 1X',
+            'CALLED 2X',
+            'CALLED 3X',
+            'EXTERNAL - APPOINTMENT SCHEDULED',
+            'EXTERNAL - READY TO SCHEDULE',
+            'PATIENT REFUSAL',
+            'PENDING AUTHORIZATION',
+            'READY FOR INITIAL SCHEDULING',
+            'READY TO SCHEDULE',
+            'SOME VISITS SCHEDULED',
+            'TRACKING ONLY - DO NOT SCHEDULE',
+            'UNABLE TO CONTACT',
+            'UNABLE TO SCHEDULE',
+            'UNKNOWN'
+        )
+        THEN 1 ELSE 0
+    END AS is_leakage_watch_status
 
 FROM sunrise.Visit v
 LEFT JOIN sunrise.OrderFact o
     ON o.VisitID = v.VisitID
-LEFT JOIN sunrise.Referral r
+INNER JOIN sunrise.Referral r
     ON r.OrderID = o.OrderID
 LEFT JOIN sunrise.Patient p
     ON p.PatientID = v.PatientID
@@ -149,9 +199,13 @@ LEFT JOIN sunrise.AppointmentRequest ar
     ON ar.OrderID = o.OrderID
 LEFT JOIN sunrise.AppointmentRequestStatus ars
     ON ars.AppointmentRequestStatusID = ar.AppointmentRequestStatusID
+LEFT JOIN sunrise.ReferralSchedulingStatus rss
+    ON rss.ReferralSchedulingStatusID = r.ReferralSchedulingStatusID
 LEFT JOIN appt_ranked appt
     ON appt.VisitID = v.VisitID
    AND appt.rn = 1
+LEFT JOIN appt_rollup aroll
+    ON aroll.VisitID = v.VisitID
 WHERE
     o.OrderDate IS NOT NULL
     AND CAST(o.OrderDate AS date) >= DATEADD(DAY, -365, CAST(GETDATE() AS date))
