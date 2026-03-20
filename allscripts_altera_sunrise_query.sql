@@ -154,5 +154,6 @@ LEFT JOIN appt_ranked appt
    AND appt.rn = 1
 WHERE
     o.OrderDate IS NOT NULL
+    AND CAST(o.OrderDate AS date) >= DATEADD(DAY, -365, CAST(GETDATE() AS date))
     -- NOTE: No-show is intentionally not filtered out; see is_no_show/no_show_status output fields.
 ;
