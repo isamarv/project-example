@@ -134,26 +134,20 @@ SELECT
     COALESCE(aroll.had_missed_or_no_show, 0) AS had_missed_or_no_show,
     COALESCE(aroll.had_appointment_canceled, 0) AS had_appointment_canceled,
     CASE
-        WHEN UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) IN
-        (
-            'ALL VISITS COMPLETE',
-            'APPOINTMENT CANCELED',
-            'AUTHORIZATION NOT NEEDED',
-            'CALLED 1X',
-            'CALLED 2X',
-            'CALLED 3X',
-            'EXTERNAL - APPOINTMENT SCHEDULED',
-            'EXTERNAL - READY TO SCHEDULE',
-            'PATIENT REFUSAL',
-            'PENDING AUTHORIZATION',
-            'READY FOR INITIAL SCHEDULING',
-            'READY TO SCHEDULE',
-            'SOME VISITS SCHEDULED',
-            'TRACKING ONLY - DO NOT SCHEDULE',
-            'UNABLE TO CONTACT',
-            'UNABLE TO SCHEDULE',
-            'UNKNOWN'
-        )
+        -- Use keyword patterning instead of exact status values so this works across site-specific status names.
+        WHEN UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%NO SHOW%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%NO-SHOW%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%MISSED%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%CANCEL%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%CALLED%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%EXTERNAL%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%REFUS%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%PENDING%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%READY%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%TRACKING%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%UNABLE%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%COMPLETE%'
+          OR UPPER(COALESCE(rss.StatusName, appt.scheduling_status, ars.AppointmentRequestStatusName, '')) LIKE '%UNKNOWN%'
         THEN 1 ELSE 0
     END AS is_leakage_watch_status
 
